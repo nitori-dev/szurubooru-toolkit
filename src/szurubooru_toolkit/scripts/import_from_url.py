@@ -211,9 +211,13 @@ def main(urls: list = [], cookies: str = '', limit_range: str = ':10000') -> Non
     ):
         with open(file + '.json') as f:
             metadata = json.load(f)
+            if not site:
+                for site_key, site_data in url_mappings.items():
+                    if site_data['url_keyword'] in metadata['category']:
+                        site = site_key
             metadata['site'] = site
             metadata['source'] = generate_src(metadata)
-
+            print(metadata)
             if 'rating' in metadata:
                 metadata['safety'] = convert_rating(metadata['rating'])
             else:

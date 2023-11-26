@@ -527,7 +527,6 @@ def prepare_post(results: dict, config: Config):
     booru_found = False
     pixiv_found = False
     for booru, result in results.items():
-        print(result.type)
         if booru != 'pixiv':
             tags.append(result[0].tags.split())
             sources.append(generate_src({'site': booru, 'id': result[0].id}))

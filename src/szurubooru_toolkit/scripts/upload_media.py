@@ -16,7 +16,7 @@ from szurubooru_toolkit import config
 from szurubooru_toolkit import get_md5sum
 from szurubooru_toolkit import shrink_img
 from szurubooru_toolkit.scripts.auto_tagger import main as auto_tagger
-
+from szurubooru_toolkit.utils import collect_sources
 
 szuru = Szurubooru(config.szurubooru['url'], config.szurubooru['username'], config.szurubooru['api_token'])
 

@@ -101,7 +101,7 @@ def parse_args() -> tuple:
             'Consider using double quotes (") if the script doesn\'t behave as intended.',
         )
 
-    return add_tags, remove_tags, update_implications, args.mode, query
+    return add_tags, remove_tags, update_implications, url, args.mode, query
 
 def scrape_url_tags(url) -> list:
     tags = []
