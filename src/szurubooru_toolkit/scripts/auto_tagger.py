@@ -255,7 +255,6 @@ def main(post_id: str = None, file_to_upload: bytes = None, limit_reached: bool 
             # Search SauceNAO with file
             if config.auto_tagger['saucenao_enabled'] and post.type != 'video' and not limit_reached:
                 sauce_results, limit_reached = get_saucenao_results(sauce, post, image)
-
                 if sauce_results:
                     tags_by_sauce, sources, post.rating = prepare_post(sauce_results, config)
                     post.source = collect_sources(*sources, *post.source.splitlines())

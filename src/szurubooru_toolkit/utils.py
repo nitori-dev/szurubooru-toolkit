@@ -525,13 +525,16 @@ def prepare_post(results: dict, config: Config):
     sources = []
     rating = []
     booru_found = False
+    pixiv_found = False
     for booru, result in results.items():
+        print(result.type)
         if booru != 'pixiv':
             tags.append(result[0].tags.split())
             sources.append(generate_src({'site': booru, 'id': result[0].id}))
             rating = convert_rating(result[0].rating)
             booru_found = True
-        else:
+        elif result.index != 'Fanbox':
+            pixiv_found = True
             if config.auto_tagger['pixiv_tags']:
                 pixiv = Pixiv(config.pixiv['token'])
                 pixiv_result = pixiv.get_result(results['pixiv'].url)
@@ -540,12 +543,15 @@ def prepare_post(results: dict, config: Config):
                 pixiv_rating = pixiv.get_rating(pixiv_result)
             pixiv_sources, pixiv_artist = extract_pixiv_artist(results['pixiv'])
             sources.append(pixiv_sources)
+        else:
+            fanbox_sources, pixiv_artist = extract_pixiv_artist(result)
+            sources.append(fanbox_sources)
 
     final_tags = [item for sublist in tags for item in sublist]
     if config.auto_tagger['pixiv_tags']:
-        if 'pixiv' in results and pixiv_tags:
+        if pixiv_found and pixiv_tags:
             final_tags.extend(pixiv_tags)
-        if not booru_found and 'pixiv' in results and pixiv_rating:
+        if not booru_found and pixiv_found and pixiv_rating:
             rating = pixiv_rating
             final_tags.append('check_safety')
         

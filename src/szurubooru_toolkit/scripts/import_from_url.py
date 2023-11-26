@@ -28,7 +28,7 @@ def parse_args() -> tuple:
 
     parser.add_argument(
         '--range',
-        default=':100',
+        default=':10000',
         help=(
             'Index range(s) specifying which files to download. '
             'These can be either a constant value, range, or slice '
@@ -84,7 +84,9 @@ def set_tags(metadata) -> list:
                     artist = metadata['user']['name']
                 except KeyError:
                     pass
-
+            if 'R-18' in metadata['tags']:
+                metadata['safety'] = 'unsafe'
+                metadata['tags'].remove('R-18')
             if artist:
                 canon_artist = danbooru_client.search_artist(artist)
                 artist_sanitized = artist.lower().replace(' ', '_')
@@ -93,7 +95,7 @@ def set_tags(metadata) -> list:
 
                 if not canon_artist:
                     canon_artist = danbooru_client.search_artist(artist_sanitized)
-                metadata['tags'].append(canon_artist if canon_artist else artist)
+                metadata['tags'].append(canon_artist if canon_artist else artist.replace(' ','_'))
         case _:
             try:
                 if isinstance(metadata['tags'], str):
@@ -106,12 +108,12 @@ def set_tags(metadata) -> list:
 
 
 @logger.catch
-def main(urls: list = [], cookies: str = '', limit_range: str = ':100') -> None:
+def main(urls: list = [], cookies: str = '', limit_range: str = ':10000') -> None:
     if not urls:
         limit_range, urls, input_file, cookies, verbose = parse_args()
     else:
         if not limit_range:
-            limit_range = ':100'
+            limit_range = ':10000'
         input_file = ''
         verbose = False
 
@@ -121,8 +123,10 @@ def main(urls: list = [], cookies: str = '', limit_range: str = ':100') -> None:
         config.auto_tagger['saucenao_enabled'] = False
         config.auto_tagger['deepbooru_enabled'] = True
     else:
-        config.upload_media['auto_tag'] = False
-
+        config.upload_media['auto_tag'] = True
+        config.auto_tagger['md5_search_enabled'] = True
+        config.auto_tagger['saucenao_enabled'] = True
+    
     current_time = datetime.now()
     timestamp = current_time.timestamp()
     download_dir = f'{config.import_from_url["tmp_path"]}/{timestamp}'
@@ -197,7 +201,7 @@ def main(urls: list = [], cookies: str = '', limit_range: str = ':100') -> None:
     logger.info(f'Downloaded {len(files)} post(s). Start importing...')
 
     saucenao_limit_reached = False
-
+    
     for file in tqdm(
         files,
         ncols=80,
@@ -221,21 +225,14 @@ def main(urls: list = [], cookies: str = '', limit_range: str = ':100') -> None:
                 metadata['tags'] = extract_twitter_artist(metadata)
             else:
                 metadata['tags'] = []
-
-            # As Twitter doesn't provide any tags compared to other sources, we try to auto tag it.
-            if site == 'twitter':
-                config.auto_tagger['md5_search_enabled'] = True
-                config.auto_tagger['saucenao_enabled'] = True
-            else:
-                config.auto_tagger['md5_search_enabled'] = False
-                config.auto_tagger['saucenao_enabled'] = False
-
+            
             with open(file, 'rb') as file_b:
                 saucenao_limit_reached = upload_media.main(file_b.read(), Path(file).suffix[1:], metadata, saucenao_limit_reached)
-
+    
     if os.path.exists(download_dir):
         shutil.rmtree(download_dir)
 
+    
     logger.success('Script finished importing!')
 
 
