@@ -6,6 +6,9 @@ from tqdm import tqdm
 
 from szurubooru_toolkit import config
 from szurubooru_toolkit import szuru
+from szurubooru_toolkit import danbooru_client
+from szurubooru_toolkit import gelbooru_client
+from szurubooru_toolkit import pixiv_client
 
 
 def parse_args() -> tuple:
@@ -15,6 +18,13 @@ def parse_args() -> tuple:
         description='This script will tag your szurubooru posts based on your input arguments and mode.',
     )
 
+    parser.add_argument(
+        '--url',
+        type=str,
+        default=None,
+        help='Specify url to add tags from. Gelbooru, Danbooru and Pixiv supported.'
+    )
+    
     parser.add_argument(
         '--add-tags',
         type=str,
@@ -60,6 +70,9 @@ def parse_args() -> tuple:
     args = parser.parse_args(argv[:-1])
     query = argv[-1]
 
+    url = args.url
+    logger.debug(f'url = {url}')
+    
     add_tags = args.add_tags
     logger.debug(f'add_tags = {add_tags}')
     remove_tags = args.remove_tags
@@ -68,15 +81,18 @@ def parse_args() -> tuple:
     update_implications = args.update_implications
     logger.debug(f'update_implications = {str(update_implications)}')
 
-    if not add_tags and not remove_tags and not update_implications:
-        logger.critical('You have to specify either --add-tags, --remove-tags or --update-implications as an argument!')
+    if not url and not add_tags and not remove_tags and not update_implications:
+        logger.critical('You have to specify either --url, --add-tags, --remove-tags or --update-implications as an argument!')
         exit()
 
     if add_tags:
         add_tags = add_tags.replace(' ', '').split(',')
+    else:
+        add_tags = []
     if remove_tags:
         remove_tags = remove_tags.replace(' ', '').split(',')
-
+    if url:
+        add_tags.extend(scrape_url_tags(url))
     logger.debug(f'query = {query}')
     if '\'' in query:
         print('')
@@ -87,13 +103,27 @@ def parse_args() -> tuple:
 
     return add_tags, remove_tags, update_implications, args.mode, query
 
+def scrape_url_tags(url) -> list:
+    tags = []
+    if 'danbooru' in url:
+        post_id = int(url.split('=')[-1])
+        danbooru_result = danbooru_client.get_result(post_id)
+        tags = danbooru_client.get_tags(danbooru_result)
+    elif 'gelbooru' in url:
+        gelbooru_result = gelbooru_client.get_result(url)
+        tags = gelbooru_client.get_tags(gelbooru_result)
+    elif 'pixiv' in url:
+        pixiv_result = pixiv_client.get_result(url)
+        tags = pixiv_client.get_tags(pixiv_result)
+    return tags
+        
 
 @logger.catch
 def main() -> None:
     """Retrieve the posts from input query, set post.tags based on mode and update them in szurubooru."""
 
     try:
-        add_tags, remove_tags, update_implications, mode, query = parse_args()
+        add_tags, remove_tags, update_implications, url, mode, query = parse_args()
 
         posts = szuru.get_posts(query, videos=True)
 
@@ -122,7 +152,8 @@ def main() -> None:
 
             if remove_tags:
                 post.tags = [tag for tag in post.tags if tag not in remove_tags]
-
+            if url:
+                post.sourceurl
             if update_implications:
                 for tag in post.tags:
                     szuru_tag = szuru.api.getTag(tag)

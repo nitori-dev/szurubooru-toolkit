@@ -16,6 +16,7 @@ from szurubooru_toolkit.scripts import upload_media
 from szurubooru_toolkit.utils import convert_rating
 from szurubooru_toolkit.utils import extract_twitter_artist
 from szurubooru_toolkit.utils import generate_src
+from szurubooru_toolkit.utils import check_tags
 
 
 def parse_args() -> tuple:
@@ -69,9 +70,8 @@ def parse_args() -> tuple:
 
 def set_tags(metadata) -> list:
     artist = ''
-
     match metadata['site']:
-        case 'fanbox' | 'e-hentai':
+        case 'fanbox' | 'e-hentai' | 'pixiv':
             if metadata['site'] == 'e-hentai':
                 for tag in metadata['tags']:
                     if tag.startswith('artist'):
@@ -79,7 +79,7 @@ def set_tags(metadata) -> list:
                         if index != -1:
                             artist = tag[index + 1 :]  # noqa E203
                             artist = artist.replace(' ', '_')
-            elif metadata['site'] == 'fanbox':
+            else:
                 try:
                     artist = metadata['user']['name']
                 except KeyError:
@@ -87,18 +87,22 @@ def set_tags(metadata) -> list:
 
             if artist:
                 canon_artist = danbooru_client.search_artist(artist)
-                metadata['tags'] = [canon_artist] if canon_artist else []
+                artist_sanitized = artist.lower().replace(' ', '_')
+                # Sometimes \3000 gets appended from the result for whatever reason
+                artist_sanitized = artist_sanitized.replace('\u3000', '')
+
+                if not canon_artist:
+                    canon_artist = danbooru_client.search_artist(artist_sanitized)
+                metadata['tags'].append(canon_artist if canon_artist else artist)
         case _:
             try:
                 if isinstance(metadata['tags'], str):
                     metadata['tags'] = metadata['tags'].split()
-                else:
-                    metadata['tags'] = []
             except KeyError:
                 if isinstance(metadata['tag_string'], str):
                     metadata['tags'] = metadata['tag_string'].split()
-
-    return metadata['tags']
+    
+    return check_tags(metadata['tags'])
 
 
 @logger.catch
@@ -146,6 +150,7 @@ def main(urls: list = [], cookies: str = '', limit_range: str = ':100') -> None:
         'twitter': {'url_keyword': 'twitter', 'user_key': None, 'password_key': None},
         'kemono': {'url_keyword': 'kemono', 'user_key': None, 'password_key': None},
         'fanbox': {'url_keyword': 'fanbox', 'user_key': None, 'password_key': None},
+        'pixiv': {'url_keyword': 'pixiv', 'user_key': None, 'password_key': None},
     }
 
     site = None

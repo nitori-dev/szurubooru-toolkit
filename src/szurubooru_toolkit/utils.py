@@ -117,6 +117,10 @@ def convert_rating(rating: str) -> str:
         convert_rating('rating:safe') -> 'safe'
     """
     switch = {
+        'General': 'safe',
+        'general': 'safe',
+        'Sensitive': 'safe',
+        'sensitive': 'safe',
         'Safe': 'safe',
         'safe': 'safe',
         's': 'safe',
@@ -477,6 +481,8 @@ def generate_src(metadata: dict) -> str:
             case 'fanbox':
                 user = metadata['creatorId']
                 src = f'https://fanbox.cc/@{user}/posts/{id}'
+            case 'pixiv':
+                src = 'https://www.pixiv.net/en/artworks/' + id
             case _:
                 src = None
     except KeyError:
@@ -530,6 +536,7 @@ def prepare_post(results: dict, config: Config):
                 pixiv = Pixiv(config.pixiv['token'])
                 pixiv_result = pixiv.get_result(results['pixiv'].url)
                 pixiv_tags = pixiv.get_tags(pixiv_result)
+                pixiv_tags = check_tags(pixiv_tags)
                 pixiv_rating = pixiv.get_rating(pixiv_result)
             pixiv_sources, pixiv_artist = extract_pixiv_artist(results['pixiv'])
             sources.append(pixiv_sources)
@@ -546,6 +553,13 @@ def prepare_post(results: dict, config: Config):
         final_tags.append(pixiv_artist)
     return final_tags, sources, rating
 
+def check_tags(tags):
+    if not tags:
+        return []
+    danbooru_module = Danbooru(None,None)
+    for i in range(len(tags)):
+        tags[i] = danbooru_module.search_tag(tags[i])
+    return tags
 
 def extract_pixiv_artist(result: Any) -> tuple[str, list]:
     pixiv_artist = result.author_name
@@ -567,7 +581,7 @@ def extract_pixiv_artist(result: Any) -> tuple[str, list]:
         if artist_danbooru:
             artist = artist_danbooru
         else:
-            artist = artist_pixiv_sanitized
+            artist = pixiv_artist
 
         if not artist_danbooru and config.auto_tagger['use_pixiv_artist']:
             try:

@@ -50,6 +50,7 @@ danbooru_client = Danbooru(config.danbooru['user'], config.danbooru['api_key'])
 gelbooru_client = Gelbooru(config.gelbooru['user'], config.gelbooru['api_key'])
 konachan_client = Moebooru('konachan', config.konachan['user'], config.konachan['password'])
 yandere_client = Moebooru('yandere', config.yandere['user'], config.yandere['password'])
+pixiv_client = Pixiv(config.pixiv['token'])
 
 szuru = Szurubooru(config.szurubooru['url'], config.szurubooru['username'], config.szurubooru['api_token'])
 

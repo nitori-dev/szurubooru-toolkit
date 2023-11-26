@@ -9,8 +9,10 @@ class Pixiv:
 
 
     def get_result(self, result_url):
-        temp = result_url.split('=')
-        post_id = int(result_url.split('=')[-1])
+        if '=' in result_url:
+            post_id = int(result_url.split('=')[-1])
+        else:
+            post_id = int(result_url.split('/')[-1])
         logger.debug(f'Getting result from id {post_id}')
         for _ in range(1, 12):
             try:

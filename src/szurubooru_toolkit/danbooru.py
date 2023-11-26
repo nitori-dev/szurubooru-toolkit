@@ -108,6 +108,42 @@ class Danbooru:
 
         return artist
 
+    def search_tag(self, tag) -> str:
+        """Search a tag on Danbooru and check if there's an equivalent tag there
+
+        Args:
+            tag (str): the tag
+        """
+        
+        for _ in range(1, 12):
+            try:
+                result = self.client.wiki_list(other_names_match=tag.lower())
+                if result:
+                    tag = result[0]['title']
+                else:
+                    search_url = (
+                        'https://danbooru.donmai.us/wiki_pages.json?'
+                        f'search[other_names_match]={tag.lower()}'
+                        '&search[is_deleted]=false'
+                    )
+                    tag = self.session.get(search_url).json()[0]['title']
+                    self.session.close()
+
+                logger.debug(f'Returning tag: {tag}')
+
+                break
+            except (IndexError, KeyError):
+                logger.debug(f'Could not find tag "{tag.lower()}"')
+                
+                break
+            except (TimeoutError, PybooruError, PybooruHTTPError, PybooruAPIError):
+                logger.debug('Could not establish connection to Danbooru, trying again in 5s...')
+                sleep(5)
+        else:
+            logger.debug('Could not establish connection to Danbooru. Skip this tag...')
+            
+        return tag
+
     def download_tags(self, query: str = '*', min_post_count: int = 10, limit: int = 100) -> list:
         """Download and return tags from Danbooru.
 
