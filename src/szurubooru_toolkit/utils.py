@@ -122,6 +122,8 @@ def convert_rating(rating: str) -> str:
         'rating:safe': 'safe',
         'rating:questionable': 'sketchy',
         'rating:explicit': 'unsafe',
+        'general': 'safe',
+        'General': 'safe',
     }
 
     new_rating = switch.get(rating)
